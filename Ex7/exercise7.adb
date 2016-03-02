@@ -15,21 +15,29 @@ procedure exercise7 is
         Aborted             : Boolean := False;
         Should_Commit       : Boolean := True;
     end Transaction_Manager;
+    
+    
     protected body Transaction_Manager is
         entry Finished when Finished_Gate_Open or Finished'Count = N is
         begin
             ------------------------------------------
             -- PART 3: Complete the exit protocol here
-            Finished_Gate_Open := True;
-            if aborted then
-                Should_Commit := False;
-            else
-                Should_Commit := True;
-            end if;
-            if Finished'Count = 0 then
-                Finished_Gate_Open := False;
-                Aborted := False;
-            end if;
+            ------------------------------------------
+            if Finished_Gate_Open = False then
+            	Finished_Gate_Open := True;
+            	Should_Commit := True;
+        	end if;
+        	
+        	if Aborted = True and Should_Commit = True then
+        		Should_Commit := False;
+    		end if;
+        		
+        	if Finished'Count = 0 then
+        		Finished_Gate_Open := False;
+        		Aborted := False;
+        	end if;
+        	
+            
             ------------------------------------------
         end Finished;
 
@@ -51,16 +59,20 @@ procedure exercise7 is
     function Unreliable_Slow_Add (x : Integer) return Integer is
     Error_Rate : Constant := 0.15;  -- (between 0 and 1)
     begin
-        ---------------------------------------
-        -- PART 1:
-        if Random(Gen) < Error_Rate then
-            delay Duration(Random(Gen)*0.5);
-            raise Count_Failed;
-        else
-            delay Duration(Random(Gen)*4.0);
-            return x+10;
-        end if;
-        ---------------------------------------
+        -------------------------------------------
+        -- PART 1: Create the transaction work here
+        -------------------------------------------
+		if Random(Gen) > Error_rate then
+			delay Duration(4.0 + (Random(Gen) - 0.5) );
+			return x + 10;
+		
+		else
+			delay Duration(0.5 + (Random(Gen) - 0.5) * 0.5 );
+			raise Count_Failed;
+		
+		end if;
+        -------------------------------------------
+
     end Unreliable_Slow_Add;
 
 
@@ -80,12 +92,14 @@ procedure exercise7 is
 
             ---------------------------------------
             -- PART 2: Do the transaction work here             
+            ---------------------------------------
             begin
-                Num := Unreliable_Slow_Add(prev);
+            	Num := Unreliable_Slow_Add(prev);
             exception
-                when Count_Failed =>
-                    Manager.Signal_Abort;
+            	when Count_Failed =>
+            		Manager.Signal_Abort;
             end;
+            
             Manager.Finished;
             ---------------------------------------
             
@@ -97,6 +111,7 @@ procedure exercise7 is
                              " to" & Integer'Image(Prev));
                 -------------------------------------------
                 -- PART 2: Roll back to previous value here
+                -------------------------------------------
                 Num := Prev;
                 -------------------------------------------
             end if;
@@ -116,3 +131,7 @@ procedure exercise7 is
 begin
     Reset(Gen); -- Seed the random number generator
 end exercise7;
+
+
+
+
